@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Projetos</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <a class="skip-link" href="#form-projeto">Pular para o formulário</a>
+
+    <header class="site-header">
+        <h1>Projetos</h1>
+        <p class="subtitle">Gerencie seus projetos rapidamente</p>
+    </header>
+
+    <main class="container" role="main">
+        <section aria-labelledby="lista-title" class="projects-section">
+            <h2 id="lista-title" class="visually-hidden">Lista de Projetos</h2>
+            <ul id="lista-projetos" class="project-list" aria-live="polite">
+            </ul>
+        </section>
+
+        <aside class="form-panel">
+            <form id="form-projeto" class="project-form" aria-describedby="form-help" novalidate>
+                <p id="form-help" class="form-help">Descrição e Data Início são obrigatórios.</p>
+
+                <label for="descricao">Descrição:</label>
+                <input type="text" id="descricao" name="descricao" required placeholder="Descrição do projeto" />
+
+                <label for="dataInicio">Data Início:</label>
+                <input type="date" id="dataInicio" name="dataInicio" required />
+
+                <label for="dataFim">Data Fim:</label>
+                <input type="date" id="dataFim" name="dataFim" />
+
+                <button type="submit" class="btn-primary">Adicionar Projeto</button>
+            </form>
+        </aside>
+
+        <div id="mensagem" class="message" aria-live="assertive"></div>
+    </main>
+
+    <footer class="site-footer">
+        <small> <strong>Criado e desenvolvido por:</strong> <br />
+             Lucas Peixoto - 237190<br />
+             Augusto Domingues -  236521</small>
+    </footer>
+
+    <script>
+        const listaProjetos = document.getElementById('lista-projetos');
+        const formProjeto = document.getElementById('form-projeto');
+        const mensagem = document.getElementById('mensagem');
+
+        async function carregarProjetos() {
+            listaProjetos.innerHTML = 'Carregando...';
+            try {
+                const response = await fetch('http://localhost:8081/projetos');
+                if (!response.ok) throw new Error('Erro ao buscar projetos');
+                const projetos = await response.json();
+                if (projetos.length === 0) {
+                    listaProjetos.innerHTML = '<li>Nenhum projeto cadastrado.</li>';
+                    return;
+                }
+                listaProjetos.innerHTML = '';
+                projetos.forEach(projeto => {
+                    const li = document.createElement('li');
+                    li.textContent = `${projeto.descricao} (Início: ${projeto.dataInicio} - Fim: ${projeto.dataFim || 'N/A'})`;
+                    listaProjetos.appendChild(li);
+                });
+            } catch (error) {
+                listaProjetos.innerHTML = '<li>Erro ao carregar projetos.</li>';
+            }
+        }
+
+        formProjeto.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            mensagem.textContent = '';
+            mensagem.className = 'message';
+
+            const descricao = formProjeto.descricao.value.trim();
+            const dataInicio = formProjeto.dataInicio.value;
+            const dataFim = formProjeto.dataFim.value;
+
+            if (!descricao || !dataInicio) {
+                mensagem.textContent = 'Descrição e Data Início são obrigatórios.';
+                mensagem.classList.add('error');
+                return;
+            }
+
+            const novoProjeto = {
+                descricao,
+                dataInicio,
+                dataFim: dataFim || null
+            };
+
+            try {
+                const response = await fetch('http://localhost:8081/projetos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(novoProjeto)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Erro ao adicionar projeto');
+                }
+                mensagem.textContent = 'Projeto adicionado com sucesso!';
+                mensagem.classList.add('success');
+                formProjeto.reset();
+                carregarProjetos();
+            } catch (error) {
+                mensagem.textContent = error.message;
+                mensagem.classList.add('error');
+            }
+        });
+
+        carregarProjetos();
+    </script>
+</body>
+</html>
